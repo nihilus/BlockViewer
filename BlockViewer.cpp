@@ -108,7 +108,7 @@ struct ida_local block_finder_t : public ctree_visitor_t
 	}
 };
 
-bool hasWord(TCustomControl *v)
+bool hasWord(TWidget *v)
 {
 	// query the cursor position
 	int x, y;
@@ -116,10 +116,10 @@ bool hasWord(TCustomControl *v)
 		return false;
 
 	// query the line at the cursor
-	char buf[MAXSTR];
+	qstring buf;
 	const char *line = get_custom_viewer_curline(v, false);
-	tag_remove(line, buf, sizeof(buf));
-	if (x >= (int)strlen(buf))
+	tag_remove(&buf, line);
+	if (x >= (int)strlen(buf.c_str()))
 		return false;
 
 	return true;
@@ -180,7 +180,7 @@ static int idaapi callback(void *, hexrays_event_t event, va_list va)
 		break;
 	case hxe_flowchart:
 		{
-			vdui_t *vu = get_tform_vdui(get_current_tform());
+			vdui_t *vu = get_widget_vdui(get_current_widget());
 			if (vu)
 			{
 				GetPseudo(vu)->ExpandAll();
@@ -194,11 +194,11 @@ static int idaapi callback(void *, hexrays_event_t event, va_list va)
 	return 0;
 }
 
-static int idaapi ExpandAllBeforeChange(void *, int code, va_list va)
+static ssize_t idaapi ExpandAllBeforeChange(void *user_data, int notification_code, va_list va)
 {
-	vdui_t *vu = get_tform_vdui(get_current_tform());
-	if (vu &&(code==idb_event::renaming_struc_member || code == idb_event::changing_struc_member ||
-		code == idb_event::changing_cmt || code == idb_event::changing_op_ti))
+	vdui_t *vu = get_widget_vdui(get_current_widget());
+	if (vu &&(notification_code ==idb_event::renaming_struc_member || notification_code == idb_event::changing_struc_member ||
+		notification_code == idb_event::changing_cmt || notification_code == idb_event::changing_op_ti))
 	{
 		GetPseudo(vu)->ExpandAll();
 	}
@@ -242,13 +242,15 @@ void idaapi term(void)
 }
 
 //--------------------------------------------------------------------------
-void idaapi run(int)
+bool idaapi run(size_t)
 {
 	func_t *pfn = get_func(get_screen_ea());
 	if (pfn)
 	{
-		jumpto(pfn->startEA);
+		jumpto(pfn->start_ea);
+		return true;
 	}
+	return false;
 }
 
 plugin_t PLUGIN =
